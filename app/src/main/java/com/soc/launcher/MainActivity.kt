@@ -109,7 +109,7 @@ fun TemporalLauncher() {
     DisposableEffect(Unit) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                Log.d("ChronosLauncher", "Package broadcast received: ${intent?.action}")
+                Log.d("FoltrainLauncher", "Package broadcast received: ${intent?.action}")
                 refreshAppsCounter++
             }
         }
@@ -496,7 +496,7 @@ fun searchContacts(context: Context, query: String): List<ContactInfo> {val cont
             }
         }
     } catch (e: Exception) {
-        Log.e("ChronosLauncher", "Error searching contacts", e)
+        Log.e("FoltrainLauncher", "Error searching contacts", e)
     }
     return contacts.values.toList()
 }

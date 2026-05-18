@@ -1,4 +1,4 @@
-// Top-level build file for Chronos Launcher
+// Top-level build file for Foltrain Launcher
 buildscript {
     repositories {
         google()

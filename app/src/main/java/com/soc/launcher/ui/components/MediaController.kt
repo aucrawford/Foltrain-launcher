@@ -208,4 +208,3 @@ fun MediaController(modifier: Modifier = Modifier) {
         }
     }
 }
-

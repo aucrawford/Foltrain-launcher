@@ -10,6 +10,7 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.provider.Settings
 import android.os.Build
+import android.provider.AlarmClock
 import android.text.format.DateFormat
 import android.provider.CalendarContract
 import androidx.compose.animation.*
@@ -19,7 +20,14 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.PriorityHigh
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.outlined.Flag
+import com.soc.launcher.data.model.Reminder
+import com.soc.launcher.data.model.TaskImportance
+import com.soc.launcher.ui.components.TaskEditor
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -86,9 +94,44 @@ fun PresentScreen(
 
     var showStats by remember { mutableStateOf(false) }
     var showMedia by remember { mutableStateOf(false) }
-
+    var showTaskEditor by remember { mutableStateOf(false) }
+    
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE) }
+
+    var allTasks by remember {
+        mutableStateOf(
+            sharedPrefs.getStringSet("tasks", emptySet())?.mapNotNull {
+                try {
+                    val parts = it.split("|")
+                    if (parts.size < 3) return@mapNotNull null
+
+                    val isCompleted = if (parts.size >= 5) parts.last().toBoolean() else false
+                    val importance = if (parts.size >= 4) {
+                        try { TaskImportance.valueOf(parts[parts.size - 2]) } catch(e: Exception) { TaskImportance.REGULAR }
+                    } else TaskImportance.REGULAR
+                    val timestamp = try {
+                        parts[if (parts.size >= 4) parts.size - 3 else 2].toLong()
+                    } catch(e: Exception) { System.currentTimeMillis() }
+
+                    val id = parts.first()
+                    val text = if (parts.size >= 4) {
+                        parts.subList(1, parts.size - 3).joinToString("|")
+                    } else {
+                        parts[1]
+                    }
+
+                    Reminder(id, text, timestamp, importance, isCompleted)
+                } catch (e: Exception) { null }
+            }?.sortedWith(compareByDescending<Reminder> { it.importance }.thenBy { it.timestamp }) ?: emptyList()
+        )
+    }
+
+    fun saveTasks(tasks: List<Reminder>) {
+        val taskStrings = tasks.map { "${it.id}|${it.text}|${it.timestamp}|${it.importance.name}|${it.isCompleted}" }.toSet()
+        sharedPrefs.edit().putStringSet("tasks", taskStrings).apply()
+        allTasks = tasks.sortedWith(compareByDescending<Reminder> { it.importance }.thenBy { it.timestamp })
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -248,8 +291,6 @@ fun PresentScreen(
 
     val hiddenPackages = remember { sharedPrefs.getStringSet("hidden_apps", emptySet()) ?: emptySet() }
 
-    // val searchBarPackages = remember { sharedPrefs.getStringSet("pinned_search_apps", emptySet()) ?: emptySet() }
-
     val playStorePackage = "com.android.vending"
 
     val bottomRowPackages = bottomRowApps.map { it.packageName }.toSet()
@@ -293,6 +334,7 @@ fun PresentScreen(
                 onMapAppSelected = onMapAppSelected
             )
 
+            // Phone Status Section
             AnimatedVisibility(
                 visible = showStats,
                 enter = expandVertically(),
@@ -316,8 +358,7 @@ fun PresentScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 16.dp),
+                            .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
@@ -326,7 +367,7 @@ fun PresentScreen(
                             if (showStats) isVpnActive(context) else false
                         }
                         val vpnText = if (vpnActive) "ACTIVE" else "INACTIVE"
-                        val vpnColor = if (vpnActive) StatusGreen else StatusGrey
+                        val vpnColor = if (vpnActive) FoltrainGoodColor else FoltrainHoldColor
                         StatItem("VPN: $vpnText", vpnColor, 16.sp) {
                             val intent = Intent("android.net.vpn.SETTINGS")
                             try {
@@ -361,7 +402,7 @@ fun PresentScreen(
                         val rawTemp = batteryTemp.toInt() // Assuming you're pulling this from a BroadcastReceiver
                         val celsius = rawTemp / 10
                         val isHot = celsius >= 40 // Set your threshold (40°C is a good warning point)
-                        val tempColor = if (isHot) StatusRed else FoltrainWhite
+                        val tempColor = if (isHot) FoltrainDangerColor else FoltrainWhite
                         StatItem("TEMP: ${batteryTemp}°C", tempColor, 16.sp) {
                             val intent = Intent(Intent.ACTION_POWER_USAGE_SUMMARY)
                             try {
@@ -373,9 +414,10 @@ fun PresentScreen(
                         if (hasUsagePermission) {
                             Text(
                                 text = "Screen Time: $totalUsageTime".uppercase(),
-                                color = FoltrainWhite,
+                                fontFamily = Raleway,
+                                color = FoltrainPriorityColor,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Medium,
                             )
                         }
                     }
@@ -399,15 +441,16 @@ fun PresentScreen(
                 }
             }
         ) {
-            // Time & Usage Section
+            // Today
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp),
+                        .fillMaxWidth()
+                        .background(Color(0xFF050A10).copy(alpha = 0.6f))
+                        .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.Start
             ) {
+                // Calendar section
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
@@ -452,13 +495,13 @@ fun PresentScreen(
                         text = currentDate.uppercase(),
                         fontSize = 16.sp,
                         fontFamily = Raleway,
-                        color = FoltrainWhite,
+                        color = FoltrainMain,
                         fontWeight = FontWeight.Medium,
                         style = TextStyle(
                             shadow = Shadow(
                                 color = Color.Black.copy(alpha = 1f),
                                 offset = Offset(0f, 0f),
-                                blurRadius = 2f
+                                blurRadius = 3f
                             )
                         )
                     )
@@ -471,7 +514,7 @@ fun PresentScreen(
                     ) {
                         calendarEvents.forEach { event ->
                             Text(
-                                text = event,
+                                text = " $event ",
                                 fontFamily = Raleway,
                                 color = FoltrainWhite,
                                 fontSize = 14.sp,
@@ -480,21 +523,21 @@ fun PresentScreen(
                                     shadow = Shadow(
                                         color = Color.Black.copy(alpha = 1f),
                                         offset = Offset(0f, 0f),
-                                        blurRadius = 2f
-                                    )
+                                        blurRadius = 3f
+                                    ),
+                                    background = FoltrainWhite.copy(alpha = 0.3f),
                                 )
                             )
                         }
                     }
                 }
 
-
+                // Alarm Section
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
                     modifier = Modifier.clickable {
-                        val uri = Uri.parse("content://com.android.clockwork.alarmclock/time/")
-                        val intent = Intent(Intent.ACTION_VIEW).setData(uri)
+                        val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         try {
                             context.startActivity(intent)
@@ -502,7 +545,10 @@ fun PresentScreen(
                             val calendarPackages = listOf(
                                 "com.google.android.clockwork.alarmclock",
                                 "com.android.alarmclock",
-                                "com.samsung.android.alarmclock"
+                                "com.samsung.android.alarmclock",
+                                "com.google.android.deskclock",
+                                "com.android.deskclock",
+                                "com.sec.android.app.clockpackage"
                             )
                             for (pkg in calendarPackages) {
                                 val launchIntent =
@@ -517,7 +563,7 @@ fun PresentScreen(
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(20.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Alarm,
@@ -544,7 +590,7 @@ fun PresentScreen(
                                         shadow = Shadow(
                                             color = Color.Black.copy(alpha = 1f),
                                             offset = Offset(0f, 0f),
-                                            blurRadius = 2f
+                                            blurRadius = 3f
                                         )
                                     )
                                 )
@@ -554,23 +600,108 @@ fun PresentScreen(
                                 text = "NO MORE ALARMS TODAY",
                                 color = FoltrainWhite,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Normal,
                                 style = TextStyle(
                                     shadow = Shadow(
                                         color = Color.Black.copy(alpha = 1f),
                                         offset = Offset(0f, 0f),
-                                        blurRadius = 2f
+                                        blurRadius = 3f
                                     )
                                 )
                             )
+                        }
+                    }
+                }
 
+                // Tasks Section
+                val incompleteTasks = allTasks.filter { !it.isCompleted }
+                if (incompleteTasks.isEmpty()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start,
+                        modifier = Modifier.clickable {
+                            showTaskEditor = true
+                        }
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.size(20.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = FoltrainWhite,
+                                modifier = Modifier.matchParentSize()
+                            )
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Text(
+                            text = "NO TASKS TODAY",
+                            color = FoltrainWhite,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            style = TextStyle(
+                                shadow = Shadow(
+                                    color = Color.Black.copy(alpha = 1f),
+                                    offset = Offset(0f, 0f),
+                                    blurRadius = 3f
+                                )
+                            )
+                        )
+                    }
+                } else {
+                    incompleteTasks.take(3).forEach { task ->
+                        val (icon, importanceColor) = when (task.importance) {
+                            TaskImportance.REGULAR -> Icons.Outlined.Flag to FoltrainWhite
+                            TaskImportance.PRIORITY -> Icons.Default.PriorityHigh to FoltrainPriorityColor
+                            TaskImportance.MAJOR -> Icons.Default.LocalFireDepartment to FoltrainDangerColor
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start,
+                            modifier = Modifier.clickable {
+                                showTaskEditor = true
+                            }
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = importanceColor,
+                                    modifier = Modifier.matchParentSize()
+                                )
+                            }
+
+                            Spacer(Modifier.width(8.dp))
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = task.text.uppercase(),
+                                    color = importanceColor,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    style = TextStyle(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 1f),
+                                            offset = Offset(0f, 0f),
+                                            blurRadius = 3f
+                                        )
+                                    )
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
+            // Media Coltroller
             AnimatedVisibility(
                 visible = showMedia,
                 enter = expandVertically(),
@@ -582,12 +713,20 @@ fun PresentScreen(
                     }
                 }
             ) {
-                MediaController()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF050A10).copy(alpha = 0.85f))
+                ) {
+                    MediaController(
+                    )
+                }
             }
 
+            // App Drawer
             Column(modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF050A10).copy(alpha = 0.5f))
+                .background(Color(0xFF050A10).copy(alpha = 0.8f))
                 .padding(vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
 
@@ -615,6 +754,29 @@ fun PresentScreen(
                 }
             }
         }
+    }
+
+    if (showTaskEditor) {
+        TaskEditor(
+            reminders = allTasks,
+            onAddReminder = { text ->
+                val newTasks = allTasks + Reminder(UUID.randomUUID().toString(), text, System.currentTimeMillis())
+                saveTasks(newTasks)
+            },
+            onRemoveReminder = { reminder ->
+                val newTasks = allTasks.filter { it.id != reminder.id }
+                saveTasks(newTasks)
+            },
+            onUpdateReminder = { updated ->
+                val newTasks = allTasks.map { if (it.id == updated.id) updated else it }
+                saveTasks(newTasks)
+            },
+            onClearCompleted = {
+                val newTasks = allTasks.filter { !it.isCompleted }
+                saveTasks(newTasks)
+            },
+            onDismiss = { showTaskEditor = false }
+        )
     }
 }
 

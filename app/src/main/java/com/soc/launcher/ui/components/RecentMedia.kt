@@ -121,43 +121,49 @@ fun RecentMedia(uri: Uri, onRemove: () -> Unit) {
 }
 
 fun getRecentMedia(context: Context, excludedUris: Set<String>): List<Uri> {
-    val images = mutableListOf<Uri>()
+    val media = mutableListOf<Uri>()
     val projection = arrayOf(
-        MediaStore.Images.Media._ID,
-        MediaStore.Images.Media.DATA
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.MEDIA_TYPE
     )
 
-    val columnPath = MediaStore.Images.Media.RELATIVE_PATH
-    val selection = "${MediaStore.Images.Media.MIME_TYPE} LIKE ? AND (" +
+    val columnPath = MediaStore.Files.FileColumns.RELATIVE_PATH
+    val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE}=${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE} OR ${MediaStore.Files.FileColumns.MEDIA_TYPE}=${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO}) AND (" +
         "$columnPath LIKE ? OR " +
         "$columnPath LIKE ? OR " +
         "$columnPath LIKE ? OR " +
         "$columnPath LIKE ?)"
     val selectionArgs = arrayOf(
-        "image/%",
         "DCIM/Camera/",
         "DCIM/Screenshots/",
         "Pictures/Screenshots/",
         "Download/"
     )
-    val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+    val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 
     context.contentResolver.query(
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        MediaStore.Files.getContentUri("external"),
         projection,
         selection,
         selectionArgs,
         sortOrder
     )?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-        while (cursor.moveToNext() && images.size < 12) {
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+        while (cursor.moveToNext() && media.size < 15) {
             val id = cursor.getLong(idColumn)
-            val contentUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString())
+            val type = cursor.getInt(typeColumn)
+            val baseUri = if (type == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO) {
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            } else {
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            }
+            val contentUri = Uri.withAppendedPath(baseUri, id.toString())
             if (!excludedUris.contains(contentUri.toString())) {
-                images.add(contentUri)
+                media.add(contentUri)
             }
         }
     }
 
-    return images
+    return media
 }

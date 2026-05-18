@@ -15,5 +15,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Chronos Launcher"
+rootProject.name = "Foltrain Launcher"
 include ':app'

@@ -17,16 +17,16 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Chronos Launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@mipmap/ic_app_launcher"
+        android:label="Foltrain Launcher"
+        android:roundIcon="@mipmap/ic_app_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
         tools:ignore="ProtectedPermissions">
 
         <service
             android:name=".MediaNotificationListener"
-            android:label="Chronos Media Listener"
+            android:label="Foltrain Media Listener"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
             <intent-filter>

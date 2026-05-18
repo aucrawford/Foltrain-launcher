@@ -8,12 +8,14 @@ data class MessageInfo(val id: String, val text: String, val address: String, va
 
 data class ContactInfo(val id: String, val name: String, val photoUri: String?)
 
+enum class TaskImportance { REGULAR, PRIORITY, MAJOR }
+
 data class Reminder(
     val id: String,
     val text: String,
     val timestamp: Long,
-    val isImportant: Boolean = false,
-    val isPink: Boolean = false
+    val importance: TaskImportance = TaskImportance.REGULAR,
+    val isCompleted: Boolean = false
 )
 
 data class AppUsageInfo(

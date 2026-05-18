@@ -1,4 +1,4 @@
-# Chronos Launcher
+# Foltrain Launcher
 
 A modern, minimal Android launcher built with Jetpack Compose.
 
@@ -28,7 +28,7 @@ This app requires several permissions to function as a full-featured launcher:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/chronos-launcher.git
+   git clone https://github.com/YOUR_USERNAME/foltrain-launcher.git
    ```
 2. Open the project in Android Studio.
 3. Build and run on your device or emulator.

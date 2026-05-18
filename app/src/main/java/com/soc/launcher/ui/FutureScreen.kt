@@ -532,7 +532,7 @@ fun ContactAvatar(contact: ContactInfo, onClick: (() -> Unit)? = null) {
                     val inputStream = context.contentResolver.openInputStream(Uri.parse(contact.photoUri))
                     value = android.graphics.BitmapFactory.decodeStream(inputStream)
                 } catch (e: Exception) {
-                    Log.e("ChronosLauncher", "Error loading contact photo", e)
+                    Log.e("FoltrainLauncher", "Error loading contact photo", e)
                 }
             }
         }
@@ -706,7 +706,7 @@ fun AppRow(
                         }
                         context.startActivity(intent)
                     } catch (e: Exception) {
-                        Log.e("ChronosLauncher", "Failed to open app info", e)
+                        Log.e("FoltrainLauncher", "Failed to open app info", e)
                     }
                 }
             )
@@ -715,18 +715,18 @@ fun AppRow(
                     Text(
                         "Uninstall app",
                         fontFamily = Raleway,
-                        color = StatusRed
+                        color = FoltrainDangerColor
                     ) },
                 onClick = {
                     showMenu = false
                     try {
-                        Log.d("ChronosLauncher", "Triggering uninstall for: ${app.packageName}")
+                        Log.d("FoltrainLauncher", "Triggering uninstall for: ${app.packageName}")
                         val intent = Intent(Intent.ACTION_DELETE).apply {
                             data = Uri.fromParts("package", app.packageName, null)
                         }
                         context.startActivity(intent)
                     } catch (e: Exception) {
-                        Log.e("ChronosLauncher", "Failed to start uninstall intent", e)
+                        Log.e("FoltrainLauncher", "Failed to start uninstall intent", e)
                     }
                 }
             )

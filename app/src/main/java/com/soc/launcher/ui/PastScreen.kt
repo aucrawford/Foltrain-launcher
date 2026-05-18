@@ -130,14 +130,13 @@ fun PastScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF050A10).copy(alpha = 0.85f)),
+            .background(Color(0xFF050A10).copy(alpha = 0.85f))
     ) {
         // App Usage
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(Color.Black.copy(alpha = 0.15f))
                 .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 0.dp)
         ) {
             AppUsageHeader(
@@ -205,7 +204,7 @@ fun PastScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(FoltrainWhite.copy(alpha = 0.03f))
+                    .background(FoltrainWhite.copy(alpha = 0.05f))
                     .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp)
             ) {
                 Text(
@@ -227,7 +226,6 @@ fun PastScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.15f))
                 .padding(start = 16.dp, end = 16.dp, top = 24.dp)
         ) {
             Row(
