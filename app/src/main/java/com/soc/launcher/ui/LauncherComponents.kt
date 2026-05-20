@@ -30,7 +30,7 @@ fun AppIcon(app: AppInfo, modifier: Modifier = Modifier, showLabel: Boolean = tr
         try {
             context.packageManager.getApplicationIcon(app.packageName).toBitmap().asImageBitmap()
         } catch (e: Exception) {
-            Log.e("TemporalLauncher", "Error loading icon for ${app.packageName}", e)
+            Log.e("FoltrainLauncher", "Error loading icon for ${app.packageName}", e)
             context.packageManager.defaultActivityIcon.toBitmap().asImageBitmap()
         }
     }

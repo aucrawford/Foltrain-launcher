@@ -26,6 +26,9 @@ import android.provider.CallLog
 import android.provider.ContactsContract
 import android.util.Log
 import android.app.usage.UsageEvents
+import android.os.*
+import android.provider.Settings
+import android.net.Uri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.app.NotificationManagerCompat
@@ -57,6 +60,7 @@ import kotlinx.coroutines.withContext
 import java.util.*
 
 class MainActivity : ComponentActivity() {
+
     @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,8 +72,6 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 val permissions = mutableListOf(
-                    Manifest.permission.READ_CALL_LOG,
-                    Manifest.permission.READ_SMS,
                     Manifest.permission.READ_CONTACTS,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -88,7 +90,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color.Black
                 ) {
-                    TemporalLauncher()
+                    FoltrainLauncher()
                 }
             }
         }
@@ -97,7 +99,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TemporalLauncher() {
+fun FoltrainLauncher() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val sharedPrefs = remember { context.getSharedPreferences("launcher_prefs", Context.MODE_PRIVATE) }
@@ -187,9 +189,9 @@ fun TemporalLauncher() {
                         value = null
                     }
                 } catch (e: SecurityException) {
-                    Log.e("TemporalLauncher", "SecurityException reading wallpaper", e)
+                    Log.e("FoltrainLauncher", "SecurityException reading wallpaper", e)
                 } catch (e: Exception) {
-                    Log.e("TemporalLauncher", "Error reading wallpaper", e)
+                    Log.e("FoltrainLauncher", "Error reading wallpaper", e)
                 }
             }
         }
@@ -198,7 +200,7 @@ fun TemporalLauncher() {
     val apps by produceState(initialValue = emptyList<AppInfo>(), refreshAppsCounter) {
         withContext(Dispatchers.IO) {
             val result = getInstalledApps(context)
-            Log.d("TemporalLauncher", "Loaded ${result.size} apps (refresh: $refreshAppsCounter)")
+            Log.d("FoltrainLauncher", "Loaded ${result.size} apps (refresh: $refreshAppsCounter)")
             value = result
         }
     }
@@ -291,7 +293,7 @@ fun getInstalledApps(context: Context): List<AppInfo> {
             }
         }
     } catch (e: Exception) {
-        Log.e("TemporalLauncher", "Error in main app query", e)
+        Log.e("FoltrainLauncher", "Error in main app query", e)
     }
 
     // 2. Comprehensive fallback scan
@@ -309,7 +311,7 @@ fun getInstalledApps(context: Context): List<AppInfo> {
             }
         }
     } catch (e: Exception) {
-        Log.e("TemporalLauncher", "Error in fallback app query", e)
+        Log.e("FoltrainLauncher", "Error in fallback app query", e)
     }
     
     return appList.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
@@ -338,49 +340,6 @@ fun getBatteryTemperature(context: Context): Float {
     val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     val temp = intent?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
     return temp / 10f
-}
-
-fun getMissedCalls(context: Context): List<MissedCallInfo> {
-    val calls = mutableListOf<MissedCallInfo>()
-    if (context.checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-        return emptyList()
-    }
-    try {
-        val cursor = context.contentResolver.query(
-            CallLog.Calls.CONTENT_URI,
-            arrayOf(CallLog.Calls._ID, CallLog.Calls.NUMBER, CallLog.Calls.CACHED_NAME),
-            "${CallLog.Calls.TYPE} = ${CallLog.Calls.MISSED_TYPE} AND ${CallLog.Calls.IS_READ} = 0",
-            null,
-            "${CallLog.Calls.DATE} DESC"
-        )
-        cursor?.use {
-            val idIndex = it.getColumnIndex(CallLog.Calls._ID)
-            val nameIndex = it.getColumnIndex(CallLog.Calls.CACHED_NAME)
-            val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
-            
-            val counts = mutableMapOf<String, Int>()
-            val latestCalls = mutableMapOf<String, Triple<String, String, String>>() // number -> (id, name, number)
-
-            while (it.moveToNext()) {
-                val id = it.getString(idIndex)
-                val name = if (nameIndex != -1) it.getString(nameIndex) else null
-                val number = if (numberIndex != -1) it.getString(numberIndex) else "Unknown"
-                val displayName = name ?: number
-                
-                counts[displayName] = (counts[displayName] ?: 0) + 1
-                if (!latestCalls.containsKey(displayName)) {
-                    latestCalls[displayName] = Triple(id, displayName, number)
-                }
-            }
-            
-            latestCalls.forEach { (displayName, info) ->
-                calls.add(MissedCallInfo(info.first, info.second, info.third, counts[displayName] ?: 1))
-            }
-        }
-    } catch (e: Exception) {
-        Log.e("TemporalLauncher", "Error querying missed calls", e)
-    }
-    return calls
 }
 
 fun getMostUsedApps(context: Context, allApps: List<AppInfo>): List<AppInfo> {
@@ -457,7 +416,7 @@ fun getFavoriteContacts(context: Context): List<ContactInfo> {
             }
         }
     } catch (e: Exception) {
-        Log.e("TemporalLauncher", "Error querying contacts", e)
+        Log.e("FoltrainLauncher", "Error querying contacts", e)
     }
     return contacts
 }
@@ -503,6 +462,23 @@ fun searchContacts(context: Context, query: String): List<ContactInfo> {val cont
 
 fun isNotificationServiceEnabled(context: Context): Boolean {
     return NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+}
+
+fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+fun requestIgnoreBatteryOptimizations(context: Context) {
+    try {
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Log.e("FoltrainLauncher", "Could not request ignore battery optimizations", e)
+    }
 }
 
 fun getDailyAppUsage(context: Context, allApps: List<AppInfo>, filterApps: Boolean = true): List<AppUsageInfo> {

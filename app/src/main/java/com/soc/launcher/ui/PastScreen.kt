@@ -119,12 +119,48 @@ fun PastScreen(
     var appUsage by remember { mutableStateOf<List<AppUsageInfo>>(emptyList()) }
     var weeklyUsage by remember { mutableStateOf<List<Long>>(emptyList()) }
     var hasUsagePermission by remember { mutableStateOf(hasUsageStatsPermission(context)) }
+    var isIgnoringBattery by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(hasUsagePermission, apps) {
         if (hasUsagePermission) {
             appUsage = getDailyAppUsage(context, apps).take(20)
             weeklyUsage = getWeeklyUsageData(context)
         }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasUsagePermission = hasUsageStatsPermission(context)
+                isIgnoringBattery = isIgnoringBatteryOptimizations(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Usage Stats Permission") },
+            text = { Text("Foltrain Launcher needs access to your usage stats to show your app activity and screen time on the Past screen. This data stays on your device.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionDialog = false
+                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                }) {
+                    Text("Grant")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Column(
@@ -142,9 +178,7 @@ fun PastScreen(
             AppUsageHeader(
                 hasPermission = hasUsagePermission,
                 onRequestPermission = {
-                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    context.startActivity(intent)
+                    showPermissionDialog = true
                 }
             )
 
@@ -153,9 +187,7 @@ fun PastScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable {
-                            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            context.startActivity(intent)
+                            showPermissionDialog = true
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -207,15 +239,34 @@ fun PastScreen(
                     .background(FoltrainWhite.copy(alpha = 0.05f))
                     .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp)
             ) {
-                Text(
-                    "Screen Time".uppercase(),
-                    fontFamily = Raleway,
-                    color = FoltrainMain,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Screen Time".uppercase(),
+                        fontFamily = Raleway,
+                        color = FoltrainMain,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    if (!isIgnoringBattery) {
+                        Text(
+                            "Optimize Stability".uppercase(),
+                            fontFamily = Raleway,
+                            color = FoltrainMain.copy(alpha = 0.7f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clickable { requestIgnoreBatteryOptimizations(context) }
+                                .padding(bottom = 12.dp)
+                        )
+                    }
+                }
                 AppUsageGraph(weeklyUsage)
             }
         }
@@ -323,9 +374,7 @@ fun AppUsageHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                context.startActivity(intent)
+                onRequestPermission()
             }
     ) {
         Text(
