@@ -224,15 +224,20 @@ fun PresentScreen(
             if (context.checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED) {
                 val events = mutableListOf<String>()
                 val now = Calendar.getInstance()
-                val startOfDay = now.clone() as Calendar
-                startOfDay.set(Calendar.HOUR_OF_DAY, 0)
-                startOfDay.set(Calendar.MINUTE, 0)
-                startOfDay.set(Calendar.SECOND, 0)
-                
-                val endOfDay = now.clone() as Calendar
-                endOfDay.set(Calendar.HOUR_OF_DAY, 23)
-                endOfDay.set(Calendar.MINUTE, 59)
-                endOfDay.set(Calendar.SECOND, 59)
+
+                val startOfDay = (now.clone() as Calendar).apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+
+                val endOfDay = (now.clone() as Calendar).apply {
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
 
                 // Use Instances to correctly handle recurring events
                 val builder = CalendarContract.Instances.CONTENT_URI.buildUpon()
@@ -242,6 +247,7 @@ fun PresentScreen(
                 val projection = arrayOf(
                     CalendarContract.Instances.TITLE,
                     CalendarContract.Instances.BEGIN,
+                    CalendarContract.Instances.END,
                     CalendarContract.Instances.ALL_DAY
                 )
                 
@@ -254,16 +260,33 @@ fun PresentScreen(
                 )?.use { cursor ->
                     val titleIdx = cursor.getColumnIndex(CalendarContract.Instances.TITLE)
                     val startIdx = cursor.getColumnIndex(CalendarContract.Instances.BEGIN)
+                    val endIdx = cursor.getColumnIndex(CalendarContract.Instances.END)
                     val allDayIdx = cursor.getColumnIndex(CalendarContract.Instances.ALL_DAY)
+                    val todayVal = now.get(Calendar.YEAR) * 1000 + now.get(Calendar.DAY_OF_YEAR)
 
                     while (cursor.moveToNext()) {
                         val title = cursor.getString(titleIdx)
                         val startTime = cursor.getLong(startIdx)
+                        val endTime = cursor.getLong(endIdx)
                         val allDay = cursor.getInt(allDayIdx) == 1
 
-                        val pattern = if (use24HourFormat) "HH:mm" else "h:mm a"
-                        val timeStr = if (allDay) "All Day" else SimpleDateFormat(pattern, Locale.getDefault()).format(Date(startTime))
-                        events.add("$timeStr - $title")
+                        val isActuallyToday = if (allDay) {
+                            val startUtc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = startTime }
+                            val endUtc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = endTime }
+
+                            val startVal = startUtc.get(Calendar.YEAR) * 1000 + startUtc.get(Calendar.DAY_OF_YEAR)
+                            val endVal = endUtc.get(Calendar.YEAR) * 1000 + endUtc.get(Calendar.DAY_OF_YEAR)
+
+                            todayVal >= startVal && todayVal < endVal
+                        } else {
+                            startTime <= endOfDay.timeInMillis
+                        }
+
+                        if (isActuallyToday) {
+                            val pattern = if (use24HourFormat) "HH:mm" else "h:mm a"
+                            val timeStr = if (allDay) "All Day" else SimpleDateFormat(pattern, Locale.getDefault()).format(Date(startTime))
+                            events.add("$timeStr - $title")
+                        }
                     }
                 }
                 value = events.distinct() // Remove duplicates if any
@@ -514,7 +537,7 @@ fun PresentScreen(
                     ) {
                         calendarEvents.forEach { event ->
                             Text(
-                                text = " $event ",
+                                text = "$event ",
                                 fontFamily = Raleway,
                                 color = FoltrainWhite,
                                 fontSize = 14.sp,
@@ -525,7 +548,7 @@ fun PresentScreen(
                                         offset = Offset(0f, 0f),
                                         blurRadius = 3f
                                     ),
-                                    background = FoltrainWhite.copy(alpha = 0.3f),
+//                                    background = FoltrainWhite.copy(alpha = 0.3f),
                                 )
                             )
                         }
