@@ -586,7 +586,7 @@ fun PresentScreen(
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Alarm,
@@ -596,7 +596,7 @@ fun PresentScreen(
                         )
                     }
 
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
 
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -606,9 +606,9 @@ fun PresentScreen(
                                 Text(
                                     text = "NEXT ALARM: $alarm",
                                     fontFamily = Raleway,
-                                    color = FoltrainWhite,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
+                                    color = FoltrainMain,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
                                     style = TextStyle(
                                         shadow = Shadow(
                                             color = Color.Black.copy(alpha = 1f),
@@ -621,9 +621,10 @@ fun PresentScreen(
                         } else {
                             Text(
                                 text = "NO MORE ALARMS TODAY",
-                                color = FoltrainWhite,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
+                                fontFamily = Raleway,
+                                color = FoltrainMain,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
                                 style = TextStyle(
                                     shadow = Shadow(
                                         color = Color.Black.copy(alpha = 1f),
@@ -648,12 +649,12 @@ fun PresentScreen(
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = FoltrainWhite,
+                                tint = FoltrainGoodColor,
                                 modifier = Modifier.matchParentSize()
                             )
                         }
@@ -688,9 +689,12 @@ fun PresentScreen(
                                 showTaskEditor = true
                             }
                         ) {
+
+                            Spacer(Modifier.width(28.dp))
+
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(16.dp)
                             ) {
                                 Icon(
                                     imageVector = icon,
@@ -700,7 +704,7 @@ fun PresentScreen(
                                 )
                             }
 
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(2.dp))
 
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
