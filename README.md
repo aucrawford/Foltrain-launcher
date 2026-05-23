@@ -8,6 +8,7 @@ A modern, minimal Android launcher built with Jetpack Compose.
 - **Media Integration**: Built-in media controls via notification listener.
 - **Quick Access**: Fast access to your most-used apps and information.
 - **Jetpack Compose**: Built entirely using modern Android UI toolkit.
+- **Supporter Model**: One-time "Pro" upgrade to support independent development and unlock advanced features.
 
 ## Permissions
 

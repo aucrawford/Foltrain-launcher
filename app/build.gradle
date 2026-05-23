@@ -20,6 +20,19 @@ android {
         }
     }
 
+    flavorDimensions = ["edition"]
+    productFlavors {
+        standard {
+            dimension "edition"
+            buildConfigField "boolean", "IS_PRO", "false"
+        }
+        pro {
+            dimension "edition"
+            applicationIdSuffix ".pro"
+            buildConfigField "boolean", "IS_PRO", "true"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
