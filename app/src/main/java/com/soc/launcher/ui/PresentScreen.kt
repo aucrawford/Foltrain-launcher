@@ -50,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.soc.launcher.ui.components.MediaController
 import com.soc.launcher.ui.components.PresentSearchBar
+import com.soc.launcher.ui.components.SupportDialog
 import com.soc.launcher.*
 import com.soc.launcher.data.model.AppInfo
 import kotlinx.coroutines.Dispatchers
@@ -447,7 +448,11 @@ fun PresentScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        StatItem("★ SUPPORT FOLTRAIN", FoltrainPriorityColor, 16.sp) {
+                        StatItem(
+                            "★ SUPPORT FOLTRAIN",
+                            FoltrainMain,
+                            16.sp
+                            ) {
                             showSupportDialog = true
                         }
                     }
@@ -791,48 +796,7 @@ fun PresentScreen(
     }
 
     if (showSupportDialog) {
-        AlertDialog(
-            onDismissRequest = { showSupportDialog = false },
-            containerColor = Color(0xFF0A1015),
-            title = {
-                Text(
-                    "SUPPORT FOLTRAIN",
-                    fontFamily = Raleway,
-                    fontWeight = FontWeight.Bold,
-                    color = FoltrainMain
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Foltrain Robotics Company is dedicated to building tools that respect human focus and autonomy.",
-                        fontFamily = Raleway,
-                        color = FoltrainWhite
-                    )
-                    Text(
-                        "Your contribution helps us remain independent, maintain servers for future cloud features, and continue developing hardware-integrated software solutions.",
-                        fontFamily = Raleway,
-                        color = FoltrainWhite
-                    )
-                    Text(
-                        "This is a one-time $10 payment to unlock all current and future Pro features.",
-                        fontFamily = Raleway,
-                        color = FoltrainPriorityColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { /* TODO: Launch Billing Flow */ }) {
-                    Text("CONTRIBUTE", color = FoltrainPriorityColor, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSupportDialog = false }) {
-                    Text("LATER", color = FoltrainWhite.copy(alpha = 0.6f))
-                }
-            }
-        )
+        SupportDialog(onDismiss = { showSupportDialog = false })
     }
 
     if (showTaskEditor) {
